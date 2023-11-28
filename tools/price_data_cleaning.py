@@ -50,7 +50,6 @@ def missing_data_estimation(df: pd.DataFrame, col: str):
     missing_rows_df = df[df[col].isna()]
 
     # Get the indexes of the missing rows region
-    # missing_rows_indexes = [df[col].isna()]
     missing_rows_indexes = df[col].isna()
 
     if not missing_rows_df.empty:
@@ -82,7 +81,7 @@ def process_price_data(filename: str, time_horizon: int) -> pd.DataFrame | pd.In
     price_data = pd.read_csv(file_location, usecols=["time", "prices"], skip_blank_lines=True)
     market_price_df = pd.DataFrame(price_data)
 
-    print(f"Length of dataframe imported: {len(market_price_df)}")
+    logging.info(f"Length of dataframe imported: {len(market_price_df)}")
 
     # Need to convert the time column to a datetime format
     market_price_df["time"] = pd.to_datetime(market_price_df["time"], format="%d/%m/%Y %H:%M", errors="coerce")
@@ -118,7 +117,7 @@ def process_price_data(filename: str, time_horizon: int) -> pd.DataFrame | pd.In
     market_price_df['day_count'] = mask.cumsum()
     market_price_df['time_horizon'] = market_price_df.groupby(market_price_df.index // time_horizon).cumcount() + 1
 
-    print(f"Length of dataframe after cleaning: {len(market_price_df)}")
+    logging.info(f"Length of dataframe after cleaning: {len(market_price_df)}")
 
     assert len(market_price_df) == len(required_range), logging.error(f"{len(market_price_df)} != {len(required_range)}"
                                                                       f" - You are missing rows in the price data")

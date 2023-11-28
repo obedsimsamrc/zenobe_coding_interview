@@ -15,8 +15,7 @@ def calculate_revenues(prices_df: pd.DataFrame, optimised_df: pd.DataFrame, trad
                        battery_power: float | int):
     """
     Calculate daily and annual revenues based on HH prices and trading volume for both strategies
-    TODO: Ensure that the battery charges each day before it discharges. Therefore the used min and max prices need to
-     be in the correct order
+    TODO: Ensure that the battery charges each day before it discharges.
 
     :param optimised_df: This is the result df from the optimisation
     :param battery_power: Battery discharge power in MW

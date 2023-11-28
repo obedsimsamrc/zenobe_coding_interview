@@ -44,7 +44,8 @@ class Battery(ConcreteModel):
         self.init_charge = init_charge
 
         # Duration of a market dispatch time interval
-        self.M = 0.5  # 1 = 1 hour, 0.5 = 30min, 0.25 = 15 min
+
+        self.M = 24 / time_horizon  # 1 = 1 hour, 0.5 = 30min, 0.25 = 15 min
 
         #######################################################################################################
         # Sets
@@ -93,8 +94,8 @@ class Battery(ConcreteModel):
             # Vary according to time horizon
             # Base assumption is that the time horizon is at least 24 hours
             if max_discharge:
-                return sum(model.discharge[i] for i in model.time_horizon_range) <= max_discharge
-            return sum(model.discharge[i] for i in model.time_horizon_range) <= max_daily_cycles * self.battery_cap
+                return model.M * sum(model.discharge[i] for i in model.time_horizon_range) <= max_discharge
+            return model.M * sum(model.discharge[i] for i in model.time_horizon_range) <= max_daily_cycles * self.battery_cap
 
     def add_storage_constraints(self):
         """
@@ -214,8 +215,8 @@ class Battery(ConcreteModel):
                       "Export Price (£/MWh)": self.export_rate[i],
                       "Import Cost (£)": self.M * self.import_rate[i] * self.charge[i].value,
                       "Export Value (£)": self.M * self.export_rate[i] * self.discharge[i].value,
-                      "Trading Profits (£)": (self.export_rate[i] * self.discharge[i].value) -
-                                             (self.import_rate[i] * self.charge[i].value),
+                      "Trading Profits (£)": self.M * ((self.export_rate[i] * self.discharge[i].value) -
+                                                       (self.import_rate[i] * self.charge[i].value)),
                       }
 
             record_list.append(record)

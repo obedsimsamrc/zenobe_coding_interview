@@ -67,10 +67,11 @@ optimised_df.insert(0, "datetime", hourly_timerange)
 
 
 # Calculate the simple market strategy revenues
-simple_daily_revenue_df, simple_annual_revenue_df = calculate_revenues(market_price_df,
-                                                                       battery_power=100,  # MW
-                                                                       trading_volume=100,  # MWh
-                                                                       optimised_df=optimised_df)
+daily_revenues_df, annual_revenues_df = calculate_revenues(market_price_df,
+                                                           battery_power=100,  # MW
+                                                           trading_volume=100,  # MWh
+                                                           optimised_df=optimised_df)
 
 file_location = os.path.join(os.path.dirname(__file__), "results", f"avg_{battery_cycle_per_day}_cycle_optimised_df.csv").replace('\\', '/')
 optimised_df.to_csv(file_location)
+

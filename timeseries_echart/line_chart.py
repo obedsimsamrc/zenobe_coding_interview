@@ -6,10 +6,10 @@ def render_timeseries_line_chart(results_df: pd.DataFrame):
 
     x_axis_array = results_df["datetime"].dt.strftime('%H:%M %d-%m-%Y').tolist()
 
-    charge_volume = results_df["DC Charging power (MW)"].tolist()
-    discharge_volume = results_df["DC Discharging power (MW)"].tolist()
+    charge_volume = [round(value, 1) for value in results_df["DC Charging power (MW)"]]
+    discharge_volume = [round(value, 1) for value in results_df["DC Discharging power (MW)"]]
     price = results_df["Import Price (£/MWh)"].tolist()
-    soc = round(results_df["State of Charge (%)"], 1).tolist()
+    soc = [round(value, 1) for value in results_df["State of Charge (%)"]]
 
     options = {
         "grid": [
@@ -54,7 +54,7 @@ def render_timeseries_line_chart(results_df: pd.DataFrame):
             {
                 "type": 'inside',
                 "start": 0,
-                "end": 30
+                "end": 1
             },
             {
                 "start": 0,

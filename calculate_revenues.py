@@ -38,8 +38,7 @@ def calculate_revenues(prices_df: pd.DataFrame, optimised_df: pd.DataFrame, trad
 
     # First, set the datetime column as the index
     prices_df.set_index("time", inplace=True, drop=True)
-    # So we need to convert the HH price profile to hourly and take the mean price in the 2 HH
-    # intervals
+    # So we need to convert the HH price profile to hourly and take the mean price in the 2 HH intervals
     hourly_price_df = prices_df.resample("H").mean()
 
     # Group by date and aggregate max and min prices
@@ -48,15 +47,15 @@ def calculate_revenues(prices_df: pd.DataFrame, optimised_df: pd.DataFrame, trad
         min_price=('prices', 'min'),
     )
 
-    daily_df["daily_price_spread"] = daily_df["max_price"] - daily_df["min_price"]      # HH spread
-    daily_df["simple_daily_profit"] = daily_df["daily_price_spread"] * trading_volume / 2  # £/MWh * MWh * 0.5h= £
+    daily_df["daily_price_spread"] = daily_df["max_price"] - daily_df["min_price"]      # hourly spread
+    daily_df["simple_daily_profit"] = daily_df["daily_price_spread"] * trading_volume  # £/MWh * MWh = £
 
     daily_df.index = pd.to_datetime(daily_df.index, format="%Y-%m-%d")
 
     # Group by year
     annual_df = daily_df.groupby(daily_df.index.year)[["simple_daily_profit"]].sum()
     annual_df.rename(columns={"simple_daily_profit": "simple_annual_profit"}, inplace=True)
-    annual_df["simple_£_kW_year"] = annual_df["simple_annual_profit"] / (battery_power * 1000)
+    annual_df["simple_£_kW_year"] = annual_df["simple_annual_profit"] / (battery_power * 1000)      # MW * 1000 =  kW
 
     ################################################################################################
     # Now need to calculate the revenues from the optimisation model
@@ -69,7 +68,7 @@ def calculate_revenues(prices_df: pd.DataFrame, optimised_df: pd.DataFrame, trad
 
     optimised_annual_df = optimised_daily_df.groupby(optimised_daily_df.index.year)[["Trading Profits (£)"]].sum()
     annual_df["optimised_annual_profit"] = optimised_annual_df["Trading Profits (£)"]
-    annual_df["optimised_£_kW_year"] = annual_df["optimised_annual_profit"] / (battery_power * 1000)
+    annual_df["optimised_£_kW_year"] = annual_df["optimised_annual_profit"] / (battery_power * 1000)  # MW * 1000 =  kW
 
     return daily_df, annual_df
 

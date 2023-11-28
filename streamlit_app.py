@@ -1,7 +1,5 @@
 import streamlit as st
-
 from timeseries_echart.line_chart import render_timeseries_line_chart
-from streamlit_echarts import st_echarts
 import pandas as pd
 import os
 
@@ -22,7 +20,6 @@ def main():
     results_df["datetime"] = pd.to_datetime(results_df["datetime"], format="%Y-%m-%d %H:%M:%S")
 
     render_timeseries_line_chart(results_df)
-
 
 
 if __name__ == "__main__":

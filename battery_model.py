@@ -4,7 +4,7 @@ Obed Sims
 Email - obedsims97@yahoo.com
 """
 import pandas as pd
-from pyomo.environ import NonNegativeReals, ConcreteModel, Binary, Constraint, Var, Param, RangeSet, maximize, Set
+from pyomo.environ import NonNegativeReals, ConcreteModel, Binary, Constraint, Var, Param, maximize, Set
 from pyomo.opt import SolverStatus, TerminationCondition, SolverFactory
 import logging
 import os
@@ -44,14 +44,13 @@ class Battery(ConcreteModel):
         self.init_charge = init_charge
 
         # Duration of a market dispatch time interval
-
-        self.M = 24 / time_horizon  # 1 = 1 hour, 0.5 = 30min, 0.25 = 15 min
+        self.M = 0.5  # 1 = 1 hour, 0.5 = 30min, 0.25 = 15 min
 
         #######################################################################################################
         # Sets
         #######################################################################################################
         self.time_horizon = time_horizon
-        self.time_horizon_range = Set(initialize=import_rate.index)
+        self.time_horizon_range = Set(initialize=[i for i in range(1, len(import_rate) + 1)])
         # self.day = RangeSet(import_rate.index.get_level_values(0)[1], import_rate.index.get_level_values(0)[-1])
 
         #######################################################################################################
@@ -78,8 +77,8 @@ class Battery(ConcreteModel):
 
         @self.Objective(sense=maximize)
         def obj_function(model):
-            return sum(model.M * (model.export_rate[i] * model.discharge[i]) - model.M * (model.import_rate[i] * model.charge[i])
-                       for i in model.time_horizon_range)
+            return sum(model.M * (model.export_rate[i] * model.discharge[i]) -
+                       model.M * (model.import_rate[i] * model.charge[i]) for i in model.time_horizon_range)
 
     def add_max_cycles_constraint(self, max_daily_cycles: float | int, max_discharge: float | int = None):
         """
@@ -92,7 +91,6 @@ class Battery(ConcreteModel):
         def max_daily_discharge_constraint(model):
             # Maximum discharge throughput constraint. The sum of all discharge flow within a day cannot exceed this
             # Vary according to time horizon
-            # Base assumption is that the time horizon is at least 24 hours
             if max_discharge:
                 return model.M * sum(model.discharge[i] for i in model.time_horizon_range) <= max_discharge
             return model.M * sum(model.discharge[i] for i in model.time_horizon_range) <= max_daily_cycles * self.battery_cap

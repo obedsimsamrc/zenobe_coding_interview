@@ -1,9 +1,8 @@
-from scipy import stats
 import pandas as pd
 import numpy as np
 import os
 import logging
-import statsmodels.api as sm
+import matplotlib.pyplot as plt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -42,29 +41,38 @@ def replace_outliers_IQR(df, q1_threshold: float, q3_threshold: float, col: str)
 
 
 def missing_data_estimation(df: pd.DataFrame, col: str):
-
-    missing_rows_df = df.loc[df[col].isna()]
-    present_rows_df = df.loc[~df[col].isna()]
-
-    # # Create some features to use for prediction
-    # present_rows_df[""]
-    #
-    # # Add a constant column for the intercept
-    # X = sm.add_constant(present_rows_df[feature_cols])
-    # y = present_rows_df[col]
-    #
-    # # Fit the model
-    # model = sm.OLS(y, X).fit()
-    #
-    # # Print the summary
-    # print(model.summary())
-
-    return missing_rows_df
-
-
-def process_price_data(filename: str) -> pd.DataFrame:
     """
 
+    :param df:
+    :param col: column to replace values
+    :return:
+    """
+    missing_rows_df = df[df[col].isna()]
+
+    # Get the indexes of the missing rows region
+    # missing_rows_indexes = [df[col].isna()]
+    missing_rows_indexes = df[col].isna()
+
+    if not missing_rows_df.empty:
+        x = len(missing_rows_df)
+        df_filled = missing_rows_df.copy()
+        df_filled[col] = df[col].shift(periods=x)
+
+        # Concatenate the filled and present rows
+        df_combined = pd.concat([df_filled, df], axis=0).sort_index()
+
+        # Remove duplicate time indexes
+        df_combined = df_combined[~df_combined.index.duplicated(keep='last')]
+
+        return df_combined, missing_rows_indexes
+    else:
+        return df.copy()
+
+
+def process_price_data(filename: str, time_horizon: int) -> pd.DataFrame | pd.Index:
+    """
+
+    :param time_horizon: Time horizon to add as a column
     :param filename:
     :return:
     """
@@ -90,7 +98,7 @@ def process_price_data(filename: str) -> pd.DataFrame:
     # Resample with the desired frequency to add missing datetime rows
     market_price_df = market_price_df.resample('30T').asfreq()[1:]
 
-    missing_df = missing_data_estimation(market_price_df, col="prices")
+    market_price_df, missing_rows_indexes = missing_data_estimation(market_price_df, col="prices")
 
     # Next if there are any empty rows we need to interpolate between the surrounding prices
     market_price_df["prices"].interpolate(method="linear", inplace=True)
@@ -108,19 +116,31 @@ def process_price_data(filename: str) -> pd.DataFrame:
     mask = market_price_df['time'].dt.strftime('%H:%M') == '00:00'
     # Use cumsum on the boolean mask to create a counter
     market_price_df['day_count'] = mask.cumsum()
-
-    # Add a column that increases by one each HH and resets at the end of the day
-    market_price_df['hh_counter'] = market_price_df.groupby(market_price_df["time"].dt.date).cumcount() + 1
+    market_price_df['time_horizon'] = market_price_df.groupby(market_price_df.index // time_horizon).cumcount() + 1
 
     print(f"Length of dataframe after cleaning: {len(market_price_df)}")
 
     assert len(market_price_df) == len(required_range), logging.error(f"{len(market_price_df)} != {len(required_range)}"
                                                                       f" - You are missing rows in the price data")
 
-    return market_price_df
+    return market_price_df, missing_rows_indexes
 
 
-# market_price_df = process_price_data("input_data.csv")
+# market_price_df, missing_rows_indexes = process_price_data("input_data.csv", time_horizon=48)
 
+# missing_rows_indexes = market_price_df.index[missing_rows_indexes]
 
+# plt.figure(figsize=(16, 10))
+#
+# # Highlight the missing rows
+# plt.scatter(missing_rows_indexes, market_price_df.loc[missing_rows_indexes]['prices'], color='red',
+#             label='Missing Entries replaced', zorder=2)
+# # Plot the entire dataset
+# plt.plot(market_price_df.index, market_price_df['prices'], label='Entire Dataset', zorder=1)
+#
+# plt.xlabel('Time')
+# plt.ylabel('Prices')
+# plt.title('Price Data with Missing Rows Highlighted')
+# plt.legend()
+# plt.show()
 

@@ -39,18 +39,22 @@ def calculate_revenues(prices_df: pd.DataFrame, optimised_df: pd.DataFrame, trad
     # First, set the datetime column as the index
     prices_df.set_index("time", inplace=True, drop=True)
     # So we need to convert the HH price profile to hourly and take the mean price in the 2 HH intervals
-    hourly_price_df = prices_df.resample("H").mean()
+    hourly_price_df = prices_df.resample("60min").mean()
+    hourly_price_df.reset_index(inplace=True)
 
-    # Group by date and aggregate max and min prices
-    daily_df = hourly_price_df.groupby(hourly_price_df.index.date).agg(
-        max_price=('prices', 'max'),
-        min_price=('prices', 'min'),
+    hourly_price_df.sort_values(by=["day_count", "prices"], ascending=[True, True], inplace=True)
+
+    # Group by day_count and apply a function to get the highest and lowest prices else return 0 for that row
+    daily_df = hourly_price_df.groupby("day_count").apply(
+        lambda x: pd.Series({
+            'max_price': x.loc[x['prices'].idxmax()]['prices'],
+            'min_price': x.loc[x['prices'].idxmin()]['prices']
+        }) if x['prices'].idxmax() > x['prices'].idxmin() else pd.Series({'max_price': 0, 'min_price': 0})
     )
 
     daily_df["daily_price_spread"] = daily_df["max_price"] - daily_df["min_price"]      # hourly spread
     daily_df["simple_daily_profit"] = daily_df["daily_price_spread"] * trading_volume  # £/MWh * MWh = £
-
-    daily_df.index = pd.to_datetime(daily_df.index, format="%Y-%m-%d")
+    daily_df.index = pd.date_range(start=hourly_price_df["time"].iloc[0], freq="1D", periods=len(daily_df))
 
     # Group by year
     annual_df = daily_df.groupby(daily_df.index.year)[["simple_daily_profit"]].sum()

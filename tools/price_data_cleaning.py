@@ -40,12 +40,12 @@ def replace_outliers_IQR(df, q1_threshold: float, q3_threshold: float, col: str)
     return df_interpolated
 
 
-def missing_data_estimation(df: pd.DataFrame, col: str):
+def missing_data_estimation(df: pd.DataFrame, col: str) -> pd.DataFrame | pd.DataFrame:
     """
 
-    :param df:
+    :param df: price dataframe including all the rows with missing prices from 10/2020 to 12/2020
     :param col: column to replace values
-    :return:
+    :return: original dataframe with the missing values replaced with historical data
     """
     missing_rows_df = df[df[col].isna()]
 
@@ -86,7 +86,7 @@ def process_price_data(filename: str, time_horizon: int) -> pd.DataFrame | pd.In
     # Need to convert the time column to a datetime format
     market_price_df["time"] = pd.to_datetime(market_price_df["time"], format="%d/%m/%Y %H:%M", errors="coerce")
 
-    # This is the required datetime range to ensure no gaps in the pricing
+    # This is the required datetime range to ensure no gaps in the price data
     required_range = pd.DataFrame(index=pd.date_range(start=market_price_df["time"].iloc[0],
                                                       end=market_price_df["time"].iloc[-1], freq="30T"))
 
@@ -97,12 +97,11 @@ def process_price_data(filename: str, time_horizon: int) -> pd.DataFrame | pd.In
     # Resample with the desired frequency to add missing datetime rows
     market_price_df = market_price_df.resample('30T').asfreq()[1:]
 
+    # Need to replace the blanks in the prices otherwise a simple interpolation will produce a poor estimation
     market_price_df, missing_rows_indexes = missing_data_estimation(market_price_df, col="prices")
 
     # Next if there are any empty rows we need to interpolate between the surrounding prices
     market_price_df["prices"].interpolate(method="linear", inplace=True)
-
-    # Reset the index if needed
     market_price_df.reset_index(inplace=True)
 
     # We need to clean up any anomalous/outlier prices using the IQR method and replace with an interpolation
@@ -125,10 +124,12 @@ def process_price_data(filename: str, time_horizon: int) -> pd.DataFrame | pd.In
     return market_price_df, missing_rows_indexes
 
 
-# market_price_df, missing_rows_indexes = process_price_data("input_data.csv", time_horizon=48)
 
+# market_price_df, missing_rows_indexes = process_price_data("input_data.csv",
+#                                                            time_horizon=48)
+#
 # missing_rows_indexes = market_price_df.index[missing_rows_indexes]
-
+#
 # plt.figure(figsize=(16, 10))
 #
 # # Highlight the missing rows

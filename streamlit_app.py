@@ -9,9 +9,6 @@ def main():
     st.title("100MW/100MWh BESS Operation Profile")
     st.markdown('A Web App by Obed Sims ([@obedsims](https://www.linkedin.com/in/obedsims/))')
 
-    # dispatch_method = st.sidebar.selectbox("Select Dispatch Method",
-    #                                        ["Average 1 Cycle", "Average 2 Cycle"])
-
     # Retrieve the saved optimised battery profile from the data file
     file_location = os.path.join(os.path.dirname(__file__), "results/").replace('\\', '/')
 

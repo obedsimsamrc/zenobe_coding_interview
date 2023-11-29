@@ -2,7 +2,7 @@
 This module runs the battery optimisation model
 """
 
-from calculate_revenues import calculate_revenues
+from tools.calculate_revenues import calculate_revenues
 from tools.price_data_cleaning import process_price_data
 from battery_model import Battery
 import pandas as pd
@@ -12,14 +12,13 @@ import math
 import os
 
 master_list = []
-status_SOC = [0.5 * 100]        # Initial state of charge set to 50% of capacity
+status_SOC = [0.5 * 100]        # Initial state of charge set to 50% of 100MWh capacity
 cycles_per_time_horizon = 1*365     # Total number of cycles per time horizon
 time_horizon = 48*365               # Time horizon in half hours
 
 
 # Import the market price data using the prepared function
 market_price_df, missing_rows_indexes = process_price_data("input_data.csv", time_horizon=time_horizon)
-
 import_rate = export_rate = market_price_df.copy().reset_index().set_index(["day_count", "time_horizon"])[['prices']]
 
 
@@ -31,10 +30,11 @@ for day_count in range(1, math.ceil(import_rate.index.get_level_values(0)[-1] / 
     if len(import_rate_sliced) < time_horizon:
         import_rate_sliced = export_rate_sliced = import_rate.iloc[(day_count - 1) * time_horizon:]
 
-    print('Optimising horizon {}/{}'.format(day_count,
-                                        math.ceil(import_rate.index.get_level_values(0)[-1] / (time_horizon / 48))))
-
     import_rate_sliced.index = export_rate_sliced.index = np.arange(1, len(import_rate_sliced) + 1)
+
+    print('\n')
+    print('Optimising horizon {}/{}'.format(day_count,
+                                            math.ceil(import_rate.index.get_level_values(0)[-1] / (time_horizon / 48))))
 
     battery = Battery(battery_capacity=100,  # MWh
                       discharge_power=100,  # MW
@@ -47,7 +47,6 @@ for day_count in range(1, math.ceil(import_rate.index.get_level_values(0)[-1] / 
                       import_rate=import_rate_sliced["prices"],
                       max_soc=1,  # p.u.
                       min_soc=0,  # p.u.
-                      time_horizon=time_horizon,      # HH - time horizon
                       init_charge=status_SOC[-1],  # This is looped so retrieve the previous loop final SoC
                       )
 
@@ -67,19 +66,21 @@ print('############## Total Simulation Time: ' + str(round(toc - tic, 2)) + ' se
 
 # Convert the hourly timeseries list and the frequency market list to a dataframe
 optimised_df = pd.DataFrame.from_records(master_list)
-hourly_timerange = pd.date_range(start=market_price_df["time"].iloc[0],
-                                 end=market_price_df["time"].iloc[-1],
+hourly_timerange = pd.date_range(start=market_price_df["time"].iloc[0], end=market_price_df["time"].iloc[-1],
                                  freq='30T').astype(str)
-
 # Set the "datetime" as the first column in the DataFrame
 optimised_df.insert(0, "datetime", hourly_timerange)
+
+assert not ((optimised_df['Charge Bool'] == 1) & (optimised_df['Discharge Bool'] == 1)).any(),\
+    "Error: Occurrences where both discharge and charge are occurring at the same time."
 
 
 # Calculate the simple market strategy revenues
 daily_revenues_df, annual_revenues_df = calculate_revenues(market_price_df,
                                                            battery_power=100,  # MW
                                                            trading_volume=100,  # MWh
-                                                           optimised_df=optimised_df)
+                                                           optimised_df=optimised_df,
+                                                           round_trip_eff=0.85)
 
 
 file_location = os.path.join(os.path.dirname(__file__), "results/").replace('\\', '/')
@@ -87,7 +88,7 @@ annual_revenues_df.to_csv(file_location + f"annual_profit_by_scenario.csv")
 daily_revenues_df.to_csv(file_location + f"daily_profit_by_scenario.csv")
 
 
-optimised_df.to_csv(file_location + f"avg_{1}_cycle_optimised_df.csv")
+# optimised_df.to_csv(file_location + f"avg_{1}_cycle_optimised_df.csv")
 
 
 

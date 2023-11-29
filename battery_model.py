@@ -24,7 +24,6 @@ class Battery(ConcreteModel):
                  export_grid_lim: float | int,
                  import_rate: pd.DataFrame,
                  export_rate: pd.DataFrame,
-                 time_horizon: int,
                  min_soc: float | int,
                  max_soc: float | int,
                  init_charge: float | int,
@@ -49,7 +48,7 @@ class Battery(ConcreteModel):
         #######################################################################################################
         # Sets
         #######################################################################################################
-        self.time_horizon = time_horizon
+        # Import rate has been sliced to match the time horizon
         self.time_horizon_range = Set(initialize=[i for i in range(1, len(import_rate) + 1)])
         # self.day = RangeSet(import_rate.index.get_level_values(0)[1], import_rate.index.get_level_values(0)[-1])
 
@@ -63,15 +62,15 @@ class Battery(ConcreteModel):
         # Variables
         #######################################################################################################
 
-        self.LevelofEnergy = Var(self.time_horizon_range, domain=NonNegativeReals)
+        self.LevelofEnergy = Var(self.time_horizon_range, domain=NonNegativeReals, name="Level of Energy (MWh)")
         # battery charge (MW)
         self.charge = Var(self.time_horizon_range, domain=NonNegativeReals, name="Charge (MW)")
         # battery discharge (MW)
         self.discharge = Var(self.time_horizon_range, domain=NonNegativeReals, name="Discharge (MW)")
 
         # Boolean Variables
-        self.charge_bool = Var(self.time_horizon_range, within=Binary)  # Bool for charging
-        self.discharge_bool = Var(self.time_horizon_range, within=Binary)  # Bool for discharging
+        self.charge_bool = Var(self.time_horizon_range, within=Binary, name="Charge Bool")  # Bool for charging
+        self.discharge_bool = Var(self.time_horizon_range, within=Binary, name="Discharge Bool")  # Bool for discharging
 
     def add_objective_function(self):
 
@@ -170,8 +169,8 @@ class Battery(ConcreteModel):
                                        'sec': time_limit,
                                    })
         if solver_selection == "cplex":
-            if day_count == 0:
-                executable = os.path.join(os.getcwd(), "solvers", "cplex.exe").replace("\\", "/")
+            if day_count == 1:
+                executable = os.path.join(os.getcwd(), "cplex.exe").replace("\\", "/")
                 # Check if the executable exists and is executable
                 if not os.path.exists(executable):
                     print(f"Solver executable {executable} does not exist.")

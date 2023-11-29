@@ -1,14 +1,16 @@
-Zenobe Interview Problem Readme
-Optimisation Execution
+# Zenobe Interview Problem Readme
+
+## Optimisation Execution
+
 To execute the optimization, follow these steps:
 
-Run the run.py file.
-Streamlit HH Timeseries Visualization
+1. Run the `run.py` file.
+
+## Streamlit HH Timeseries Visualization
+
 To view the Streamlit HH (Half-Hourly) timeseries, perform the following:
 
-Open the terminal.
-Type the following command:
-arduino
-Copy code
-$ streamlit run streamlit_app.py
+1. Open the terminal.
+2. Type the following command:
+  $ streamlit run streamlit_app.py
 
